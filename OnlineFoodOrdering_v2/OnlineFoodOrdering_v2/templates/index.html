@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quickeats!</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body, html {
+      height: 100%;
+    }
+    .content-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="content-wrapper">
+    <nav class="navbar navbar-dark bg-success">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/"><span style='font-size:40px;'>&#129377;</span> Quickeats</a>
+        <div class="d-flex">
+          <a href="/login" class="btn btn-outline-light me-2">Login</a>
+          <a href="/register" class="btn btn-outline-light">Register</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container py-5 text-center main-content d-flex flex-column justify-content-center align-items-center">
+      <h1 class="mb-4"><span style='font-size:px;80;'>&#127829;</span> Welcome to Quickeats!<span style='font-size:40px;'>&#127850;</span></h1>
+      <p class="lead">Quickly order meals from your home, Login to get started! </span> </p>
+      <span style='font-size:50px;'>&#128175;
+
+      <div class="mt-4">
+        <a href="/login" class="btn btn-success btn-lg me-3">Login</a>
+        <a href="/register" class="btn btn-outline-danger btn-lg">Register</a>
+      </div>
+    </div>
+
+    <footer class="text-center text-white py-4 bg-success mt-auto">
+      &copy; 2025 Quickeats. 30 minute delievery guarentee. All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>
