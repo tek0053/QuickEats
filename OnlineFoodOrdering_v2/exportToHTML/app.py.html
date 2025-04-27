@@ -1,0 +1,693 @@
+<html>
+<head>
+<title>app.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+app.py</font>
+</center></td></tr></table>
+<pre><span class="s0"># app.py</span>
+<span class="s2">from </span><span class="s1">flask </span><span class="s2">import </span><span class="s1">render_template</span><span class="s3">, </span><span class="s1">redirect</span><span class="s3">, </span><span class="s1">request</span><span class="s3">, </span><span class="s1">session</span><span class="s3">, </span><span class="s1">url_for</span><span class="s3">, </span><span class="s1">Flask</span><span class="s3">, </span><span class="s1">jsonify</span>
+<span class="s2">from </span><span class="s1">flask </span><span class="s2">import </span><span class="s1">send_from_directory</span>
+<span class="s2">from </span><span class="s1">flask_sqlalchemy </span><span class="s2">import </span><span class="s1">SQLAlchemy</span>
+<span class="s2">from </span><span class="s1">flask_cors </span><span class="s2">import </span><span class="s1">CORS</span>
+<span class="s2">from </span><span class="s1">datetime </span><span class="s2">import </span><span class="s1">datetime</span>
+<span class="s2">import </span><span class="s1">os</span>
+<span class="s2">import </span><span class="s1">random</span>
+<span class="s2">import </span><span class="s1">string</span>
+<span class="s2">from </span><span class="s1">werkzeug</span><span class="s3">.</span><span class="s1">utils </span><span class="s2">import </span><span class="s1">secure_filename</span>
+
+<span class="s2">from </span><span class="s1">models </span><span class="s2">import </span><span class="s1">init_app</span><span class="s3">, </span><span class="s1">db</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order_item </span><span class="s2">import </span><span class="s1">OrderItem</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">review </span><span class="s2">import </span><span class="s1">Review</span>
+<span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+
+<span class="s1">app </span><span class="s3">= </span><span class="s1">Flask</span><span class="s3">(</span><span class="s1">__name__</span><span class="s3">, </span><span class="s1">static_folder</span><span class="s3">=</span><span class="s4">'static'</span><span class="s3">, </span><span class="s1">template_folder</span><span class="s3">=</span><span class="s4">'templates'</span><span class="s3">)</span>
+<span class="s1">CORS</span><span class="s3">(</span><span class="s1">app</span><span class="s3">)</span>
+
+<span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'UPLOAD_FOLDER'</span><span class="s3">] = </span><span class="s4">'uploads'</span>
+<span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'SESSION_COOKIE_SAMESITE'</span><span class="s3">] = </span><span class="s4">'Strict'</span>
+<span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'SESSION_COOKIE_PATH'</span><span class="s3">] = </span><span class="s4">'/'</span>
+<span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'SESSION_KEY_PREFIX'</span><span class="s3">] = </span><span class="s4">'helloo'</span>
+<span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'SESSION_COOKIE_NAME'</span><span class="s3">] = </span><span class="s4">'Bookstorevsession'</span>
+<span class="s1">app</span><span class="s3">.</span><span class="s1">secret_key </span><span class="s3">= </span><span class="s4">&quot;Kc5c3zTk'-3&lt;&amp;BdL:P92O{_(:-NkY+KMMW&quot;</span>
+
+<span class="s1">os</span><span class="s3">.</span><span class="s1">makedirs</span><span class="s3">(</span><span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'UPLOAD_FOLDER'</span><span class="s3">], </span><span class="s1">exist_ok</span><span class="s3">=</span><span class="s2">True</span><span class="s3">)</span>
+<span class="s1">init_app</span><span class="s3">(</span><span class="s1">app</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">index</span><span class="s3">():</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'index.html'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">, </span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">login</span><span class="s3">():</span>
+    <span class="s1">error </span><span class="s3">= </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">request</span><span class="s3">.</span><span class="s1">method </span><span class="s3">== </span><span class="s4">'POST'</span><span class="s3">:</span>
+        <span class="s1">email </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'email'</span><span class="s3">)</span>
+        <span class="s1">password </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'password'</span><span class="s3">)</span>
+
+        <span class="s1">print</span><span class="s3">(</span><span class="s1">email</span><span class="s3">)</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s1">password</span><span class="s3">)</span>
+
+        <span class="s0"># Query the user from the database</span>
+        <span class="s1">user </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">email</span><span class="s3">=</span><span class="s1">email</span><span class="s3">, </span><span class="s1">password</span><span class="s3">=</span><span class="s1">password</span><span class="s3">).</span><span class="s1">first</span><span class="s3">()</span>
+
+        <span class="s2">if </span><span class="s1">user</span><span class="s3">:</span>
+            <span class="s1">print</span><span class="s3">(</span><span class="s4">'aksjkjsjksj'</span><span class="s3">)</span>
+            <span class="s0"># Store user information in session</span>
+            <span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">] = </span><span class="s1">user</span><span class="s3">.</span><span class="s1">id</span>
+            <span class="s1">session</span><span class="s3">[</span><span class="s4">'role'</span><span class="s3">] = </span><span class="s1">user</span><span class="s3">.</span><span class="s1">role</span>
+
+            <span class="s0"># Redirect based on user role</span>
+            <span class="s2">if </span><span class="s1">user</span><span class="s3">.</span><span class="s1">role </span><span class="s3">== </span><span class="s4">'admin'</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/dashboard'</span><span class="s3">)</span>
+            <span class="s2">else</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/user/dashboard'</span><span class="s3">)</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s1">error </span><span class="s3">= </span><span class="s4">'Invalid email or password.'</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'login.html'</span><span class="s3">, </span><span class="s1">error</span><span class="s3">=</span><span class="s1">error</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/register'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">, </span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">register</span><span class="s3">():</span>
+    <span class="s1">error </span><span class="s3">= </span><span class="s2">None</span>
+    <span class="s2">if </span><span class="s1">request</span><span class="s3">.</span><span class="s1">method </span><span class="s3">== </span><span class="s4">'POST'</span><span class="s3">:</span>
+        <span class="s1">username </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'username'</span><span class="s3">)</span>
+        <span class="s1">email </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'email'</span><span class="s3">)</span>
+        <span class="s1">password </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'password'</span><span class="s3">)</span>
+        <span class="s1">confirm_password </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'confirm_password'</span><span class="s3">)</span>
+        <span class="s1">role </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">)</span>
+
+        <span class="s0"># Check if passwords match</span>
+        <span class="s2">if </span><span class="s1">password </span><span class="s3">!= </span><span class="s1">confirm_password</span><span class="s3">:</span>
+            <span class="s1">error </span><span class="s3">= </span><span class="s4">'Passwords do not match.'</span>
+            <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'register.html'</span><span class="s3">, </span><span class="s1">error</span><span class="s3">=</span><span class="s1">error</span><span class="s3">)</span>
+
+        <span class="s0"># Check if user already exists</span>
+        <span class="s1">existing_user </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">email</span><span class="s3">=</span><span class="s1">email</span><span class="s3">).</span><span class="s1">first</span><span class="s3">()</span>
+        <span class="s2">if </span><span class="s1">existing_user</span><span class="s3">:</span>
+            <span class="s1">error </span><span class="s3">= </span><span class="s4">'User already exists.'</span>
+            <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'register.html'</span><span class="s3">, </span><span class="s1">error</span><span class="s3">=</span><span class="s1">error</span><span class="s3">)</span>
+
+        <span class="s0"># Create new user</span>
+        <span class="s1">new_user </span><span class="s3">= </span><span class="s1">User</span><span class="s3">(</span>
+            <span class="s1">username</span><span class="s3">=</span><span class="s1">username</span><span class="s3">,</span>
+            <span class="s1">email</span><span class="s3">=</span><span class="s1">email</span><span class="s3">,</span>
+            <span class="s1">password</span><span class="s3">=</span><span class="s1">password</span><span class="s3">,  </span><span class="s0"># In production, hash the password!</span>
+            <span class="s1">role</span><span class="s3">=</span><span class="s1">role</span><span class="s3">,</span>
+            <span class="s1">created_at</span><span class="s3">=</span><span class="s1">datetime</span><span class="s3">.</span><span class="s1">now</span><span class="s3">()</span>
+        <span class="s3">)</span>
+
+        <span class="s2">try</span><span class="s3">:</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">new_user</span><span class="s3">)</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+            <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+        <span class="s2">except </span><span class="s1">Exception </span><span class="s2">as </span><span class="s1">e</span><span class="s3">:</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">rollback</span><span class="s3">()</span>
+            <span class="s1">error </span><span class="s3">= </span><span class="s4">f'Registration failed: </span><span class="s2">{</span><span class="s1">str</span><span class="s3">(</span><span class="s1">e</span><span class="s3">)</span><span class="s2">}</span><span class="s4">'</span>
+            <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'register.html'</span><span class="s3">, </span><span class="s1">error</span><span class="s3">=</span><span class="s1">error</span><span class="s3">)</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'register.html'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/get_users'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">get_users</span><span class="s3">():</span>
+    <span class="s1">users </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([{</span><span class="s1">k</span><span class="s3">: </span><span class="s1">v </span><span class="s2">for </span><span class="s1">k</span><span class="s3">, </span><span class="s1">v </span><span class="s2">in </span><span class="s1">u</span><span class="s3">.</span><span class="s1">__dict__</span><span class="s3">.</span><span class="s1">items</span><span class="s3">() </span><span class="s2">if not </span><span class="s1">k</span><span class="s3">.</span><span class="s1">startswith</span><span class="s3">(</span><span class="s4">'_'</span><span class="s3">)} </span><span class="s2">for </span><span class="s1">u </span><span class="s2">in </span><span class="s1">users</span><span class="s3">])</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/user/dashboard'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">user_dashboard</span><span class="s3">():</span>
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'customer'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s1">url_for</span><span class="s3">(</span><span class="s4">'login'</span><span class="s3">))</span>
+
+    <span class="s1">user_id </span><span class="s3">= </span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]</span>
+    <span class="s1">user </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">user_id</span><span class="s3">)</span>
+    <span class="s1">orders </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">user_id</span><span class="s3">=</span><span class="s1">user_id</span><span class="s3">).</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">Order</span><span class="s3">.</span><span class="s1">order_date</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'user/dashboard.html'</span><span class="s3">, </span><span class="s1">user</span><span class="s3">=</span><span class="s1">user</span><span class="s3">, </span><span class="s1">orders</span><span class="s3">=</span><span class="s1">orders</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/get_products'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">get_products</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s1">items </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s1">products </span><span class="s3">= []</span>
+
+    <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">items</span><span class="s3">:</span>
+        <span class="s1">category </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">id</span><span class="s3">=</span><span class="s1">item</span><span class="s3">.</span><span class="s1">category_id</span><span class="s3">).</span><span class="s1">first</span><span class="s3">()</span>
+        <span class="s1">products</span><span class="s3">.</span><span class="s1">append</span><span class="s3">({</span>
+            <span class="s4">'id'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+            <span class="s4">'title'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">name</span><span class="s3">,</span>
+            <span class="s4">'price'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">price</span><span class="s3">,</span>
+            <span class="s4">'stock'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">stock</span><span class="s3">,</span>
+            <span class="s4">'image_url'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">image_url</span><span class="s3">,</span>
+            <span class="s4">'book_type'</span><span class="s3">: </span><span class="s1">category</span><span class="s3">.</span><span class="s1">category_name </span><span class="s2">if </span><span class="s1">category </span><span class="s2">else </span><span class="s4">'Uncategorized'</span>
+        <span class="s3">})</span>
+
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">(</span><span class="s1">products</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/uploads/&lt;filename&gt;'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">uploaded_file</span><span class="s3">(</span><span class="s1">filename</span><span class="s3">):</span>
+    <span class="s2">return </span><span class="s1">send_from_directory</span><span class="s3">(</span><span class="s1">app</span><span class="s3">.</span><span class="s1">config</span><span class="s3">[</span><span class="s4">'UPLOAD_FOLDER'</span><span class="s3">], </span><span class="s1">filename</span><span class="s3">)</span>
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/get_food_categories'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">get_food_categories</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s1">categories </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([</span>
+        <span class="s3">{</span>
+            <span class="s4">'id'</span><span class="s3">: </span><span class="s1">category</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+            <span class="s4">'name'</span><span class="s3">: </span><span class="s1">category</span><span class="s3">.</span><span class="s1">category_name</span><span class="s3">,</span>
+            <span class="s4">'description'</span><span class="s3">: </span><span class="s1">category</span><span class="s3">.</span><span class="s1">description</span>
+        <span class="s3">}</span>
+        <span class="s2">for </span><span class="s1">category </span><span class="s2">in </span><span class="s1">categories</span>
+    <span class="s3">])</span>
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/product_details/&lt;int:product_id&gt;'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">product_details</span><span class="s3">(</span><span class="s1">product_id</span><span class="s3">):</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">review </span><span class="s2">import </span><span class="s1">Review</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">product </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get_or_404</span><span class="s3">(</span><span class="s1">product_id</span><span class="s3">)</span>
+    <span class="s1">category </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">product</span><span class="s3">.</span><span class="s1">category_id</span><span class="s3">)</span>
+
+    <span class="s0"># Join reviews with usernames using menu_item_id</span>
+    <span class="s1">review_data </span><span class="s3">= </span><span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">query</span><span class="s3">(</span><span class="s1">Review</span><span class="s3">, </span><span class="s1">User</span><span class="s3">.</span><span class="s1">username</span><span class="s3">) </span><span class="s1">\</span>
+        <span class="s3">.</span><span class="s1">join</span><span class="s3">(</span><span class="s1">User</span><span class="s3">, </span><span class="s1">Review</span><span class="s3">.</span><span class="s1">user_id </span><span class="s3">== </span><span class="s1">User</span><span class="s3">.</span><span class="s1">id</span><span class="s3">) </span><span class="s1">\</span>
+        <span class="s3">.</span><span class="s1">filter</span><span class="s3">(</span><span class="s1">Review</span><span class="s3">.</span><span class="s1">menu_item_id </span><span class="s3">== </span><span class="s1">product</span><span class="s3">.</span><span class="s1">id</span><span class="s3">).</span><span class="s1">all</span><span class="s3">()</span>
+
+    <span class="s1">reviews </span><span class="s3">= [{</span>
+        <span class="s4">'username'</span><span class="s3">: </span><span class="s1">username</span><span class="s3">,</span>
+        <span class="s4">'rating'</span><span class="s3">: </span><span class="s1">review</span><span class="s3">.</span><span class="s1">rating</span><span class="s3">,</span>
+        <span class="s4">'comment'</span><span class="s3">: </span><span class="s1">review</span><span class="s3">.</span><span class="s1">comment</span>
+    <span class="s3">} </span><span class="s2">for </span><span class="s1">review</span><span class="s3">, </span><span class="s1">username </span><span class="s2">in </span><span class="s1">review_data</span><span class="s3">]</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span>
+        <span class="s4">'user/product_details.html'</span><span class="s3">,</span>
+        <span class="s1">product</span><span class="s3">=</span><span class="s1">product</span><span class="s3">,</span>
+        <span class="s1">category</span><span class="s3">=</span><span class="s1">category</span><span class="s3">,</span>
+        <span class="s1">reviews</span><span class="s3">=</span><span class="s1">reviews</span><span class="s3">,</span>
+        <span class="s1">is_admin</span><span class="s3">=(</span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) == </span><span class="s4">'admin'</span><span class="s3">)</span>
+    <span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/update_stock'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">update_stock</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">product_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'product_id'</span><span class="s3">)</span>
+    <span class="s1">new_stock </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'stock'</span><span class="s3">)</span>
+
+    <span class="s1">item </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">product_id</span><span class="s3">)</span>
+    <span class="s2">if </span><span class="s1">item </span><span class="s2">and </span><span class="s1">new_stock</span><span class="s3">.</span><span class="s1">isdigit</span><span class="s3">():</span>
+        <span class="s1">item</span><span class="s3">.</span><span class="s1">stock </span><span class="s3">= </span><span class="s1">int</span><span class="s3">(</span><span class="s1">new_stock</span><span class="s3">)</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">f'/product_details/</span><span class="s2">{</span><span class="s1">product_id</span><span class="s2">}</span><span class="s4">'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/submit_review'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">submit_review</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">review </span><span class="s2">import </span><span class="s1">Review</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'customer'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">user_id </span><span class="s3">= </span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]</span>
+    <span class="s1">product_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'menu_item_id'</span><span class="s3">)  </span><span class="s0"># renamed from 'product_id'</span>
+    <span class="s1">rating </span><span class="s3">= </span><span class="s1">int</span><span class="s3">(</span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'rating'</span><span class="s3">))</span>
+    <span class="s1">comment </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'comment'</span><span class="s3">)</span>
+
+    <span class="s1">review </span><span class="s3">= </span><span class="s1">Review</span><span class="s3">(</span>
+        <span class="s1">user_id</span><span class="s3">=</span><span class="s1">user_id</span><span class="s3">,</span>
+        <span class="s1">menu_item_id</span><span class="s3">=</span><span class="s1">product_id</span><span class="s3">,</span>
+        <span class="s1">rating</span><span class="s3">=</span><span class="s1">rating</span><span class="s3">,</span>
+        <span class="s1">comment</span><span class="s3">=</span><span class="s1">comment</span>
+    <span class="s3">)</span>
+
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">review</span><span class="s3">)</span>
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">f'/product_details/</span><span class="s2">{</span><span class="s1">product_id</span><span class="s2">}</span><span class="s4">'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/add_order'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">add_order</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+    <span class="s2">from </span><span class="s1">datetime </span><span class="s2">import </span><span class="s1">datetime</span>
+    <span class="s1">user_id </span><span class="s3">= </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'user_id'</span><span class="s3">)</span>
+    <span class="s2">if not </span><span class="s1">user_id</span><span class="s3">:</span>
+        <span class="s1">user_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">headers</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'User-Id'</span><span class="s3">)</span>
+    <span class="s2">if not </span><span class="s1">user_id</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'error'</span><span class="s3">: </span><span class="s4">'Unauthorized'</span><span class="s3">}), </span><span class="s5">401</span>
+
+    <span class="s1">data </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">get_json</span><span class="s3">(</span><span class="s1">force</span><span class="s3">=</span><span class="s2">True</span><span class="s3">)</span>
+    <span class="s1">total_amount </span><span class="s3">= </span><span class="s1">float</span><span class="s3">(</span><span class="s1">data</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'total_amount'</span><span class="s3">))</span>
+
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">(</span>
+        <span class="s1">user_id</span><span class="s3">=</span><span class="s1">int</span><span class="s3">(</span><span class="s1">user_id</span><span class="s3">),</span>
+        <span class="s1">order_date</span><span class="s3">=</span><span class="s1">datetime</span><span class="s3">.</span><span class="s1">now</span><span class="s3">(),</span>
+        <span class="s1">total_amount</span><span class="s3">=</span><span class="s1">total_amount</span><span class="s3">,</span>
+        <span class="s1">status</span><span class="s3">=</span><span class="s4">'Pending'</span>
+    <span class="s3">)</span>
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">order</span><span class="s3">)</span>
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'order_id'</span><span class="s3">: </span><span class="s1">order</span><span class="s3">.</span><span class="s1">id</span><span class="s3">})</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/add_order_items'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">add_order_items</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order_item </span><span class="s2">import </span><span class="s1">OrderItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s1">data </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">get_json</span><span class="s3">()</span>
+    <span class="s1">order_id </span><span class="s3">= </span><span class="s1">data</span><span class="s3">[</span><span class="s4">'order_id'</span><span class="s3">]</span>
+    <span class="s1">items </span><span class="s3">= </span><span class="s1">data</span><span class="s3">[</span><span class="s4">'items'</span><span class="s3">]</span>
+
+    <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">items</span><span class="s3">:</span>
+        <span class="s1">product </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">item</span><span class="s3">[</span><span class="s4">'product_id'</span><span class="s3">])</span>
+
+        <span class="s2">if </span><span class="s1">product </span><span class="s2">and </span><span class="s1">product</span><span class="s3">.</span><span class="s1">stock </span><span class="s3">&gt;= </span><span class="s1">item</span><span class="s3">[</span><span class="s4">'quantity'</span><span class="s3">]:</span>
+            <span class="s0"># Save order item</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">OrderItem</span><span class="s3">(</span>
+                <span class="s1">order_id</span><span class="s3">=</span><span class="s1">order_id</span><span class="s3">,</span>
+                <span class="s1">menu_item_id</span><span class="s3">=</span><span class="s1">item</span><span class="s3">[</span><span class="s4">'product_id'</span><span class="s3">],  </span><span class="s0"># ✅ updated field name</span>
+                <span class="s1">quantity</span><span class="s3">=</span><span class="s1">item</span><span class="s3">[</span><span class="s4">'quantity'</span><span class="s3">],</span>
+                <span class="s1">price</span><span class="s3">=</span><span class="s1">product</span><span class="s3">.</span><span class="s1">price</span>
+            <span class="s3">))</span>
+
+            <span class="s0"># Update stock</span>
+            <span class="s1">product</span><span class="s3">.</span><span class="s1">stock </span><span class="s3">-= </span><span class="s1">item</span><span class="s3">[</span><span class="s4">'quantity'</span><span class="s3">]</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'error'</span><span class="s3">: </span><span class="s4">f'Insufficient stock for item ID </span><span class="s2">{</span><span class="s1">item</span><span class="s3">[</span><span class="s4">&quot;product_id&quot;</span><span class="s3">]</span><span class="s2">}</span><span class="s4">'</span><span class="s3">}), </span><span class="s5">400</span>
+
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'success'</span><span class="s3">: </span><span class="s2">True</span><span class="s3">})</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/cart'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">cart</span><span class="s3">():</span>
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'customer'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'user/cart.html'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/orders'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">orders</span><span class="s3">():</span>
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'customer'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'user/orders.html'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/get_orders'</span><span class="s3">, </span><span class="s1">methods </span><span class="s3">=  [</span><span class="s4">'GET'</span><span class="s3">, </span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">get_orders</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([])</span>
+
+    <span class="s1">orders </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">user_id</span><span class="s3">=</span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]).</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">Order</span><span class="s3">.</span><span class="s1">order_date</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([{</span>
+        <span class="s4">'id'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+        <span class="s4">'status'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">status</span><span class="s3">,</span>
+        <span class="s4">'order_date'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">order_date</span><span class="s3">.</span><span class="s1">strftime</span><span class="s3">(</span><span class="s4">'%Y-%m-%d %H:%M'</span><span class="s3">),</span>
+        <span class="s4">'total_amount'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">total_amount</span>
+    <span class="s3">} </span><span class="s2">for </span><span class="s1">o </span><span class="s2">in </span><span class="s1">orders</span><span class="s3">])</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/get_order_details/&lt;int:order_id&gt;'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">get_order_details</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">):</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order_item </span><span class="s2">import </span><span class="s1">OrderItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get_or_404</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">)</span>
+
+    <span class="s0"># Only show customer's own order</span>
+    <span class="s2">if </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) == </span><span class="s4">'customer' </span><span class="s2">and </span><span class="s1">order</span><span class="s3">.</span><span class="s1">user_id </span><span class="s3">!= </span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]:</span>
+        <span class="s2">return </span><span class="s4">&quot;Unauthorized&quot;</span><span class="s3">, </span><span class="s5">403</span>
+
+    <span class="s1">order_items </span><span class="s3">= </span><span class="s1">OrderItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">=</span><span class="s1">order</span><span class="s3">.</span><span class="s1">id</span><span class="s3">).</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s1">item_details </span><span class="s3">= []</span>
+
+    <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">order_items</span><span class="s3">:</span>
+        <span class="s1">menu_item </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">menu_item_id</span><span class="s3">)</span>
+        <span class="s1">item_details</span><span class="s3">.</span><span class="s1">append</span><span class="s3">({</span>
+            <span class="s4">'menu_item_id'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">menu_item_id</span><span class="s3">,</span>
+            <span class="s4">'name'</span><span class="s3">: </span><span class="s1">menu_item</span><span class="s3">.</span><span class="s1">name</span><span class="s3">,</span>
+            <span class="s4">'image_url'</span><span class="s3">: </span><span class="s1">menu_item</span><span class="s3">.</span><span class="s1">image_url</span><span class="s3">,</span>
+            <span class="s4">'quantity'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">quantity</span><span class="s3">,</span>
+            <span class="s4">'price'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">price</span>
+        <span class="s3">})</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span>
+        <span class="s4">'user/order_details.html'</span><span class="s3">,</span>
+        <span class="s1">order</span><span class="s3">=</span><span class="s1">order</span><span class="s3">,</span>
+        <span class="s1">items</span><span class="s3">=</span><span class="s1">item_details</span>
+    <span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/cancel_order'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">cancel_order</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order_item </span><span class="s2">import </span><span class="s1">OrderItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'customer'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">order_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'order_id'</span><span class="s3">)</span>
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">id</span><span class="s3">=</span><span class="s1">order_id</span><span class="s3">, </span><span class="s1">user_id</span><span class="s3">=</span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]).</span><span class="s1">first</span><span class="s3">()</span>
+
+    <span class="s2">if </span><span class="s1">order </span><span class="s2">and </span><span class="s1">order</span><span class="s3">.</span><span class="s1">status</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">().</span><span class="s1">lower</span><span class="s3">() == </span><span class="s4">'pending'</span><span class="s3">:</span>
+        <span class="s0"># Cancel the order</span>
+        <span class="s1">order</span><span class="s3">.</span><span class="s1">status </span><span class="s3">= </span><span class="s4">'Cancelled'</span>
+
+        <span class="s0"># Restore stock</span>
+        <span class="s1">items </span><span class="s3">= </span><span class="s1">OrderItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">=</span><span class="s1">order</span><span class="s3">.</span><span class="s1">id</span><span class="s3">).</span><span class="s1">all</span><span class="s3">()</span>
+        <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">items</span><span class="s3">:</span>
+            <span class="s1">product </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">menu_item_id</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">product</span><span class="s3">:</span>
+                <span class="s1">product</span><span class="s3">.</span><span class="s1">stock </span><span class="s3">+= </span><span class="s1">item</span><span class="s3">.</span><span class="s1">quantity</span>
+
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">f'/get_order_details/</span><span class="s2">{</span><span class="s1">order_id</span><span class="s2">}</span><span class="s4">'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/set_order_delivered'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">set_order_delivered</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+
+    <span class="s1">order_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'order_id'</span><span class="s3">)</span>
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">)</span>
+
+    <span class="s2">if not </span><span class="s1">order</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'error'</span><span class="s3">: </span><span class="s4">'Order not found'</span><span class="s3">}), </span><span class="s5">404</span>
+
+    <span class="s1">order</span><span class="s3">.</span><span class="s1">status </span><span class="s3">= </span><span class="s4">'Delivered'</span>
+    <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">({</span><span class="s4">'message'</span><span class="s3">: </span><span class="s4">f'Order #</span><span class="s2">{</span><span class="s1">order</span><span class="s3">.</span><span class="s1">id</span><span class="s2">} </span><span class="s4">marked as Delivered'</span><span class="s3">})</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/cancel_order'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">admin_cancel_order</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order_item </span><span class="s2">import </span><span class="s1">OrderItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">order_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'order_id'</span><span class="s3">)</span>
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">order </span><span class="s2">and </span><span class="s1">order</span><span class="s3">.</span><span class="s1">status</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">().</span><span class="s1">lower</span><span class="s3">() == </span><span class="s4">'pending'</span><span class="s3">:</span>
+        <span class="s1">order</span><span class="s3">.</span><span class="s1">status </span><span class="s3">= </span><span class="s4">'Cancelled'</span>
+
+        <span class="s0"># Restore stock</span>
+        <span class="s1">items </span><span class="s3">= </span><span class="s1">OrderItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">=</span><span class="s1">order</span><span class="s3">.</span><span class="s1">id</span><span class="s3">).</span><span class="s1">all</span><span class="s3">()</span>
+        <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">items</span><span class="s3">:</span>
+            <span class="s1">product </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">menu_item_id</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">product</span><span class="s3">:</span>
+                <span class="s1">product</span><span class="s3">.</span><span class="s1">stock </span><span class="s3">+= </span><span class="s1">item</span><span class="s3">.</span><span class="s1">quantity</span>
+
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">f'/get_order_details/</span><span class="s2">{</span><span class="s1">order_id</span><span class="s2">}</span><span class="s4">'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/mark_delivered'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">admin_mark_delivered</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">order_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'order_id'</span><span class="s3">)</span>
+    <span class="s1">order </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">order_id</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">order </span><span class="s2">and </span><span class="s1">order</span><span class="s3">.</span><span class="s1">status</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">().</span><span class="s1">lower</span><span class="s3">() == </span><span class="s4">'pending'</span><span class="s3">:</span>
+        <span class="s1">order</span><span class="s3">.</span><span class="s1">status </span><span class="s3">= </span><span class="s4">'Delivered'</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">f'/get_order_details/</span><span class="s2">{</span><span class="s1">order_id</span><span class="s2">}</span><span class="s4">'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/get_orders'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_get_orders</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+    <span class="s2">if </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([])</span>
+    <span class="s1">orders </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">Order</span><span class="s3">.</span><span class="s1">order_date</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([{</span>
+        <span class="s4">'id'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+        <span class="s4">'total_amount'</span><span class="s3">: </span><span class="s1">o</span><span class="s3">.</span><span class="s1">total_amount</span>
+    <span class="s3">} </span><span class="s2">for </span><span class="s1">o </span><span class="s2">in </span><span class="s1">orders</span><span class="s3">])</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/get_users'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_get_users</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+    <span class="s2">if </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([])</span>
+    <span class="s1">users </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">jsonify</span><span class="s3">([{</span>
+        <span class="s4">'id'</span><span class="s3">: </span><span class="s1">u</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+        <span class="s4">'role'</span><span class="s3">: </span><span class="s1">u</span><span class="s3">.</span><span class="s1">role</span>
+    <span class="s3">} </span><span class="s2">for </span><span class="s1">u </span><span class="s2">in </span><span class="s1">users</span><span class="s3">])</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/dashboard'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_dashboard</span><span class="s3">():</span>
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/dashboard.html'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/products'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_products</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">items </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s1">products </span><span class="s3">= []</span>
+
+    <span class="s2">for </span><span class="s1">item </span><span class="s2">in </span><span class="s1">items</span><span class="s3">:</span>
+        <span class="s1">category </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">category_id</span><span class="s3">)</span>
+        <span class="s1">products</span><span class="s3">.</span><span class="s1">append</span><span class="s3">({</span>
+            <span class="s4">'id'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">,</span>
+            <span class="s4">'name'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">name</span><span class="s3">,</span>
+            <span class="s4">'price'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">price</span><span class="s3">,</span>
+            <span class="s4">'stock'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">stock</span><span class="s3">,</span>
+            <span class="s4">'image_url'</span><span class="s3">: </span><span class="s1">item</span><span class="s3">.</span><span class="s1">image_url</span><span class="s3">,</span>
+            <span class="s4">'category'</span><span class="s3">: </span><span class="s1">category</span><span class="s3">.</span><span class="s1">category_name </span><span class="s2">if </span><span class="s1">category </span><span class="s2">else </span><span class="s4">&quot;Uncategorized&quot;</span>
+        <span class="s3">})</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/products.html'</span><span class="s3">, </span><span class="s1">products</span><span class="s3">=</span><span class="s1">products</span><span class="s3">)</span>
+
+
+<span class="s2">import </span><span class="s1">os</span>
+<span class="s2">from </span><span class="s1">werkzeug</span><span class="s3">.</span><span class="s1">utils </span><span class="s2">import </span><span class="s1">secure_filename</span>
+<span class="s2">from </span><span class="s1">datetime </span><span class="s2">import </span><span class="s1">datetime</span>
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/add_product'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">, </span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">add_product</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">request</span><span class="s3">.</span><span class="s1">method </span><span class="s3">== </span><span class="s4">'POST'</span><span class="s3">:</span>
+        <span class="s1">name </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">[</span><span class="s4">'name'</span><span class="s3">]</span>
+        <span class="s1">description </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'description'</span><span class="s3">, </span><span class="s4">''</span><span class="s3">)</span>
+        <span class="s1">price </span><span class="s3">= </span><span class="s1">float</span><span class="s3">(</span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">[</span><span class="s4">'price'</span><span class="s3">])</span>
+        <span class="s1">stock </span><span class="s3">= </span><span class="s1">int</span><span class="s3">(</span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">[</span><span class="s4">'stock'</span><span class="s3">])</span>
+        <span class="s1">category_id </span><span class="s3">= </span><span class="s1">int</span><span class="s3">(</span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">[</span><span class="s4">'category_id'</span><span class="s3">])</span>
+
+        <span class="s1">image_file </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">files</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'image'</span><span class="s3">)</span>
+        <span class="s1">image_url </span><span class="s3">= </span><span class="s4">''</span>
+        <span class="s2">if </span><span class="s1">image_file </span><span class="s2">and </span><span class="s1">image_file</span><span class="s3">.</span><span class="s1">filename</span><span class="s3">:</span>
+            <span class="s1">filename </span><span class="s3">= </span><span class="s1">secure_filename</span><span class="s3">(</span><span class="s1">image_file</span><span class="s3">.</span><span class="s1">filename</span><span class="s3">)</span>
+            <span class="s1">image_path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">path</span><span class="s3">.</span><span class="s1">join</span><span class="s3">(</span><span class="s4">'uploads'</span><span class="s3">, </span><span class="s1">filename</span><span class="s3">)</span>
+            <span class="s1">image_file</span><span class="s3">.</span><span class="s1">save</span><span class="s3">(</span><span class="s1">image_path</span><span class="s3">)</span>
+            <span class="s1">image_url </span><span class="s3">= </span><span class="s1">image_path  </span><span class="s0"># Store relative path</span>
+
+        <span class="s1">item </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">(</span>
+            <span class="s1">name</span><span class="s3">=</span><span class="s1">name</span><span class="s3">,</span>
+            <span class="s1">description</span><span class="s3">=</span><span class="s1">description</span><span class="s3">,</span>
+            <span class="s1">price</span><span class="s3">=</span><span class="s1">price</span><span class="s3">,</span>
+            <span class="s1">stock</span><span class="s3">=</span><span class="s1">stock</span><span class="s3">,</span>
+            <span class="s1">category_id</span><span class="s3">=</span><span class="s1">category_id</span><span class="s3">,</span>
+            <span class="s1">image_url</span><span class="s3">=</span><span class="s1">image_url</span><span class="s3">,</span>
+            <span class="s1">created_at</span><span class="s3">=</span><span class="s1">datetime</span><span class="s3">.</span><span class="s1">now</span><span class="s3">(),</span>
+            <span class="s1">created_by</span><span class="s3">=</span><span class="s1">session</span><span class="s3">[</span><span class="s4">'user_id'</span><span class="s3">]</span>
+        <span class="s3">)</span>
+
+        <span class="s2">try</span><span class="s3">:</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">item</span><span class="s3">)</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+            <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/products'</span><span class="s3">)</span>
+        <span class="s2">except </span><span class="s1">Exception </span><span class="s2">as </span><span class="s1">e</span><span class="s3">:</span>
+            <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">rollback</span><span class="s3">()</span>
+            <span class="s2">return </span><span class="s4">f&quot;Failed to add item: </span><span class="s2">{</span><span class="s1">str</span><span class="s3">(</span><span class="s1">e</span><span class="s3">)</span><span class="s2">}</span><span class="s4">&quot;</span><span class="s3">, </span><span class="s5">500</span>
+
+    <span class="s0"># GET request</span>
+    <span class="s1">categories </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/add_product.html'</span><span class="s3">, </span><span class="s1">categories</span><span class="s3">=</span><span class="s1">categories</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/delete_product'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">delete_product</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">menu_item </span><span class="s2">import </span><span class="s1">MenuItem</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">product_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'product_id'</span><span class="s3">)</span>
+    <span class="s1">product </span><span class="s3">= </span><span class="s1">MenuItem</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">product_id</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">product</span><span class="s3">:</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">delete</span><span class="s3">(</span><span class="s1">product</span><span class="s3">)</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/products'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/orders'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_orders</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">order </span><span class="s2">import </span><span class="s1">Order</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">orders </span><span class="s3">= </span><span class="s1">Order</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">Order</span><span class="s3">.</span><span class="s1">order_date</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/orders.html'</span><span class="s3">, </span><span class="s1">orders</span><span class="s3">=</span><span class="s1">orders</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/users'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">admin_users</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">users </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">User</span><span class="s3">.</span><span class="s1">created_at</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/users.html'</span><span class="s3">, </span><span class="s1">users</span><span class="s3">=</span><span class="s1">users</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/delete_user'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">admin_delete_user</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">user </span><span class="s2">import </span><span class="s1">User</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">user_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'user_id'</span><span class="s3">)</span>
+    <span class="s1">user </span><span class="s3">= </span><span class="s1">User</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">user_id</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">user</span><span class="s3">:</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">delete</span><span class="s3">(</span><span class="s1">user</span><span class="s3">)</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/users'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/food_categories'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'GET'</span><span class="s3">, </span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">admin_food_categories</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">error_message </span><span class="s3">= </span><span class="s2">None</span>
+
+    <span class="s2">if </span><span class="s1">request</span><span class="s3">.</span><span class="s1">method </span><span class="s3">== </span><span class="s4">'POST'</span><span class="s3">:</span>
+        <span class="s1">category_name </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'category_name'</span><span class="s3">)</span>
+        <span class="s1">description </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'description'</span><span class="s3">, </span><span class="s4">''</span><span class="s3">)</span>
+
+        <span class="s2">if not </span><span class="s1">category_name</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">():</span>
+            <span class="s1">error_message </span><span class="s3">= </span><span class="s4">&quot;Category name is required.&quot;</span>
+        <span class="s2">else</span><span class="s3">:</span>
+            <span class="s1">exists </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">filter_by</span><span class="s3">(</span><span class="s1">category_name</span><span class="s3">=</span><span class="s1">category_name</span><span class="s3">).</span><span class="s1">first</span><span class="s3">()</span>
+            <span class="s2">if </span><span class="s1">exists</span><span class="s3">:</span>
+                <span class="s1">error_message </span><span class="s3">= </span><span class="s4">f&quot;Category '</span><span class="s2">{</span><span class="s1">category_name</span><span class="s2">}</span><span class="s4">' already exists.&quot;</span>
+            <span class="s2">else</span><span class="s3">:</span>
+                <span class="s1">new_cat </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">(</span><span class="s1">category_name</span><span class="s3">=</span><span class="s1">category_name</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">(), </span><span class="s1">description</span><span class="s3">=</span><span class="s1">description</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">())</span>
+                <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">add</span><span class="s3">(</span><span class="s1">new_cat</span><span class="s3">)</span>
+                <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+                <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/food_categories'</span><span class="s3">)</span>
+
+    <span class="s1">categories </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">order_by</span><span class="s3">(</span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">id</span><span class="s3">.</span><span class="s1">desc</span><span class="s3">()).</span><span class="s1">all</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">render_template</span><span class="s3">(</span><span class="s4">'admin/food_categories.html'</span><span class="s3">, </span><span class="s1">categories</span><span class="s3">=</span><span class="s1">categories</span><span class="s3">, </span><span class="s1">error_message</span><span class="s3">=</span><span class="s1">error_message</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/admin/delete_food_category'</span><span class="s3">, </span><span class="s1">methods</span><span class="s3">=[</span><span class="s4">'POST'</span><span class="s3">])</span>
+<span class="s2">def </span><span class="s1">delete_food_category</span><span class="s3">():</span>
+    <span class="s2">from </span><span class="s1">models</span><span class="s3">.</span><span class="s1">food_category </span><span class="s2">import </span><span class="s1">FoodCategory</span>
+
+    <span class="s2">if </span><span class="s4">'user_id' </span><span class="s2">not in </span><span class="s1">session </span><span class="s2">or </span><span class="s1">session</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'role'</span><span class="s3">) != </span><span class="s4">'admin'</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+    <span class="s1">category_id </span><span class="s3">= </span><span class="s1">request</span><span class="s3">.</span><span class="s1">form</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s4">'category_id'</span><span class="s3">)</span>
+    <span class="s1">category </span><span class="s3">= </span><span class="s1">FoodCategory</span><span class="s3">.</span><span class="s1">query</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s1">category_id</span><span class="s3">)</span>
+
+    <span class="s2">if </span><span class="s1">category</span><span class="s3">:</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">delete</span><span class="s3">(</span><span class="s1">category</span><span class="s3">)</span>
+        <span class="s1">db</span><span class="s3">.</span><span class="s1">session</span><span class="s3">.</span><span class="s1">commit</span><span class="s3">()</span>
+
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/admin/food_categories'</span><span class="s3">)</span>
+
+
+<span class="s3">@</span><span class="s1">app</span><span class="s3">.</span><span class="s1">route</span><span class="s3">(</span><span class="s4">'/logout'</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">logout</span><span class="s3">():</span>
+    <span class="s1">session</span><span class="s3">.</span><span class="s1">clear</span><span class="s3">()</span>
+    <span class="s2">return </span><span class="s1">redirect</span><span class="s3">(</span><span class="s4">'/login'</span><span class="s3">)</span>
+
+
+<span class="s2">if </span><span class="s1">__name__ </span><span class="s3">== </span><span class="s4">'__main__'</span><span class="s3">:</span>
+    <span class="s1">app</span><span class="s3">.</span><span class="s1">run</span><span class="s3">(</span><span class="s1">debug</span><span class="s3">=</span><span class="s2">True</span><span class="s3">)</span>
+</pre>
+</body>
+</html>

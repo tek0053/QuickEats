@@ -17,10 +17,10 @@ from models.order import Order
 from models.order_item import OrderItem
 from models.review import Review
 from models.user import User
-
+#imports all of the tables for the databases and use within app.
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
-
+#app config
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 app.config['SESSION_COOKIE_PATH'] = '/'
@@ -31,12 +31,12 @@ app.secret_key = "Kc5c3zTk'-3<&BdL:P92O{_(:-NkY+KMMW"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 init_app(app)
 
-
+#websites index
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
+#apps login routing
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -66,7 +66,7 @@ def login():
 
     return render_template('login.html', error=error)
 
-
+#apps path to register user
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
@@ -108,13 +108,13 @@ def register():
 
     return render_template('register.html')
 
-
+#gets users path for use in database and admin side.
 @app.route('/get_users', methods=['GET'])
 def get_users():
     users = User.query.all()
     return jsonify([{k: v for k, v in u.__dict__.items() if not k.startswith('_')} for u in users])
 
-
+#user dashboard, which shows shop / orders / log in / log out info and etc.
 @app.route('/user/dashboard')
 def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'customer':
@@ -126,7 +126,7 @@ def user_dashboard():
 
     return render_template('user/dashboard.html', user=user, orders=orders)
 
-
+#gets product for display within app html, shows everything we've added and imports food categorys
 @app.route('/get_products')
 def get_products():
     from models.menu_item import MenuItem
@@ -148,12 +148,24 @@ def get_products():
 
     return jsonify(products)
 
-
+#app path for uploaded image files
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+@app.route('/get_food_categories', methods=['GET'])
+def get_food_categories():
+    from models.food_category import FoodCategory
 
-
+    categories = FoodCategory.query.all()
+    return jsonify([
+        {
+            'id': category.id,
+            'name': category.category_name,
+            'description': category.description
+        }
+        for category in categories
+    ])
+#shows product details, for example we display allergy information in our products, so shows based on this code.
 @app.route('/product_details/<int:product_id>')
 def product_details(product_id):
     from models.menu_item import MenuItem
@@ -186,7 +198,7 @@ def product_details(product_id):
         is_admin=(session.get('role') == 'admin')
     )
 
-
+#shows stock updates when changed within the admin side.
 @app.route('/update_stock', methods=['POST'])
 def update_stock():
     from models.menu_item import MenuItem
@@ -204,7 +216,7 @@ def update_stock():
 
     return redirect(f'/product_details/{product_id}')
 
-
+#reviews section
 @app.route('/submit_review', methods=['POST'])
 def submit_review():
     from models.review import Review
@@ -229,20 +241,22 @@ def submit_review():
 
     return redirect(f'/product_details/{product_id}')
 
-
+#adds order to database and admin side when submit by customer
 @app.route('/add_order', methods=['POST'])
 def add_order():
     from models.order import Order
     from datetime import datetime
-
-    if 'user_id' not in session or session.get('role') != 'customer':
+    user_id = session.get('user_id')
+    if not user_id:
+        user_id = request.headers.get('User-Id')
+    if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    data = request.get_json()
+    data = request.get_json(force=True)
     total_amount = float(data.get('total_amount'))
 
     order = Order(
-        user_id=session['user_id'],
+        user_id=int(user_id),
         order_date=datetime.now(),
         total_amount=total_amount,
         status='Pending'
@@ -252,7 +266,7 @@ def add_order():
 
     return jsonify({'order_id': order.id})
 
-
+#adds the items from the shop into the order_items and postman code.
 @app.route('/add_order_items', methods=['POST'])
 def add_order_items():
     from models.order_item import OrderItem
@@ -282,22 +296,22 @@ def add_order_items():
     db.session.commit()
     return jsonify({'success': True})
 
-
+#shows shopping cart with whatever items have been added to it.
 @app.route('/cart')
 def cart():
     if 'user_id' not in session or session.get('role') != 'customer':
         return redirect('/login')
     return render_template('user/cart.html')
 
-
+#shows orders and their status on admin side.
 @app.route('/orders')
 def orders():
     if 'user_id' not in session or session.get('role') != 'customer':
         return redirect('/login')
     return render_template('user/orders.html')
 
-
-@app.route('/get_orders')
+#gets all active orders within the database
+@app.route('/get_orders', methods =  ['GET', 'POST'])
 def get_orders():
     from models.order import Order
 
@@ -313,7 +327,7 @@ def get_orders():
         'total_amount': o.total_amount
     } for o in orders])
 
-
+#shows order details, wether its pending, cancelled, completed etc.
 @app.route('/get_order_details/<int:order_id>')
 def get_order_details(order_id):
     from models.order import Order
@@ -348,7 +362,7 @@ def get_order_details(order_id):
         items=item_details
     )
 
-
+#fundamentals for cancelling an order on the user side, shows on admin side when cancelled.
 @app.route('/cancel_order', methods=['POST'])
 def cancel_order():
     from models.order import Order
@@ -376,7 +390,7 @@ def cancel_order():
 
     return redirect(f'/get_order_details/{order_id}')
 
-
+#code for admin side, setting an order as being complete.
 @app.route('/set_order_delivered', methods=['POST'])
 def set_order_delivered():
     from models.order import Order
@@ -392,7 +406,7 @@ def set_order_delivered():
 
     return jsonify({'message': f'Order #{order.id} marked as Delivered'})
 
-
+#admin side for cancelling orders.
 @app.route('/admin/cancel_order', methods=['POST'])
 def admin_cancel_order():
     from models.order import Order
@@ -419,7 +433,7 @@ def admin_cancel_order():
 
     return redirect(f'/get_order_details/{order_id}')
 
-
+#admin side for delivered item.
 @app.route('/admin/mark_delivered', methods=['POST'])
 def admin_mark_delivered():
     from models.order import Order
@@ -436,7 +450,7 @@ def admin_mark_delivered():
 
     return redirect(f'/get_order_details/{order_id}')
 
-
+#gets all orders from admin.
 @app.route('/admin/get_orders')
 def admin_get_orders():
     from models.order import Order
@@ -448,7 +462,7 @@ def admin_get_orders():
         'total_amount': o.total_amount
     } for o in orders])
 
-
+#gets all current users on the database from the admin side
 @app.route('/admin/get_users')
 def admin_get_users():
     from models.user import User
@@ -460,14 +474,14 @@ def admin_get_users():
         'role': u.role
     } for u in users])
 
-
+#admin dashboard, shows orders, items, categories
 @app.route('/admin/dashboard')
 def admin_dashboard():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect('/login')
     return render_template('admin/dashboard.html')
 
-
+#shows product page for admin, with everything we have added
 @app.route('/admin/products')
 def admin_products():
     from models.menu_item import MenuItem
@@ -496,7 +510,7 @@ def admin_products():
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
-
+#code for adding a product.
 @app.route('/admin/add_product', methods=['GET', 'POST'])
 def add_product():
     from models.menu_item import MenuItem
@@ -543,7 +557,7 @@ def add_product():
     categories = FoodCategory.query.all()
     return render_template('admin/add_product.html', categories=categories)
 
-
+#code for remove a product from the site.
 @app.route('/admin/delete_product', methods=['POST'])
 def delete_product():
     from models.menu_item import MenuItem
@@ -560,7 +574,7 @@ def delete_product():
 
     return redirect('/admin/products')
 
-
+#shows orders on admin side, can set status of them.
 @app.route('/admin/orders')
 def admin_orders():
     from models.order import Order
@@ -600,7 +614,7 @@ def admin_delete_user():
 
     return redirect('/admin/users')
 
-
+#food categories part for admin side, can edit add delete, etc.
 @app.route('/admin/food_categories', methods=['GET', 'POST'])
 def admin_food_categories():
     from models.food_category import FoodCategory
@@ -629,7 +643,7 @@ def admin_food_categories():
     categories = FoodCategory.query.order_by(FoodCategory.id.desc()).all()
     return render_template('admin/food_categories.html', categories=categories, error_message=error_message)
 
-
+#section for deleting a category of food.
 @app.route('/admin/delete_food_category', methods=['POST'])
 def delete_food_category():
     from models.food_category import FoodCategory
@@ -646,7 +660,7 @@ def delete_food_category():
 
     return redirect('/admin/food_categories')
 
-
+#logs user out.
 @app.route('/logout')
 def logout():
     session.clear()
